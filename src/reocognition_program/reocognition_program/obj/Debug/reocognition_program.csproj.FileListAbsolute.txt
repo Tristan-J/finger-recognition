@@ -1,0 +1,1 @@
+E:\workspace\finger-recognition\src\reocognition_program\reocognition_program\bin\Debug\reocognition_program.exe.config
