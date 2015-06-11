@@ -140,8 +140,13 @@ namespace ConsoleApplication1
                 String inputPath = "";
                 String line;
                 while (STATUS && (line = inputPath.ReadLine) != null){
-                    char[] splitChar = {'\t'};
+                    // ADDBLOCK: judge if break the process
+
+                    char[] splitChar = {"\t"};
                     String[] s = line.Split(splitChar);
+
+                    // ADDBLOCK: judge if the input line is complete
+                    // however, this might use no less than 3 input lines
 
                     setData(Convert.ToInt32(s[0]), Convert.ToInt32(s[1]), Convert.ToInt32(s[2]));
                     isAction();
@@ -153,9 +158,11 @@ namespace ConsoleApplication1
         class Thumb : Finger {
             // recognize functions
             private bool isPowerTrigger() {
+                // ADDBLOCK
                 return false;
             }
             private bool isMove() {
+                // ADDBLOCK
                 return false;
             }
             private override void isAction() {
