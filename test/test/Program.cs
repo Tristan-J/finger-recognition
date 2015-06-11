@@ -1,4 +1,16 @@
-﻿using System;
+﻿/*
+*   author:     tristan
+*   email:      tristan.xiery@gmail.com
+*   tips:
+*               ADDBLOCK    where shold add function code block
+*               SETTINGS    where the settings are set static
+*   optimize:   
+*               1. the roll down function impact the average line
+*               2. if the index-click impact the data of middle \
+*                   , I can choose the one that is more obvious
+*/ 
+
+using System;
 using System.ComponentModel;
 using System.Collections;
 using System.Diagnostics;
@@ -174,8 +186,8 @@ namespace ConsoleApplication1
                 return;
             }
 
-            // creation function
             public Thumb() {
+                // SETTINGS
                 data = new Data();
                 recordPath = "../../../records/thumb.record";
                 setAxisFromRecord();
@@ -201,6 +213,7 @@ namespace ConsoleApplication1
             }
 
             public Index() {
+                // SETTINGS
                 data = new Data();
                 recordPath = "../../../records/index.record";
                 setAxisFromRecord();
@@ -226,6 +239,7 @@ namespace ConsoleApplication1
             }
 
             public Middle() {
+                // SETTINGS
                 data = new Data();
                 recordPath = "../../../records/middle.record";
                 setAxisFromRecord();
@@ -234,10 +248,13 @@ namespace ConsoleApplication1
             }
         }
 
-        static private bool STATUS; // true for working and false for pause
+        static private bool STATUS;
+        static private int THRESHOLD;
 
         static private void initiate() {
+            // SETTINGS
             STATUS = true;
+            THRESHOLD = 8000;
             Finger.initiateFingerStatus();
             return;
         }
