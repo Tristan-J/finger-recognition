@@ -10,3 +10,15 @@ E:\workspace\gestureConfiguration\test\test\obj\Debug\test.pdb
 E:\workspace\gestureConfiguration\test\test\bin\Debug\test.exe
 E:\workspace\gestureConfiguration\test\test\bin\Debug\test.pdb
 E:\workspace\gestureConfiguration\test\test\obj\Debug\test.csprojResolveAssemblyReference.cache
+E:\workspace\finger-recognition\test\test\bin\Debug\test.exe.config
+E:\workspace\finger-recognition\test\test\obj\Debug\test.exe
+E:\workspace\finger-recognition\test\test\obj\Debug\test.pdb
+E:\workspace\finger-recognition\test\test\bin\Debug\test.exe
+E:\workspace\finger-recognition\test\test\bin\Debug\test.pdb
+E:\workspace\finger-recognition\test\test\obj\Debug\test.csprojResolveAssemblyReference.cache
+E:\workspace\gestureConfiguration_tristan\finger-recognition\test\test\bin\Debug\test.exe.config
+E:\workspace\gestureConfiguration_tristan\finger-recognition\test\test\obj\Debug\test.exe
+E:\workspace\gestureConfiguration_tristan\finger-recognition\test\test\obj\Debug\test.pdb
+E:\workspace\gestureConfiguration_tristan\finger-recognition\test\test\bin\Debug\test.exe
+E:\workspace\gestureConfiguration_tristan\finger-recognition\test\test\bin\Debug\test.pdb
+E:\workspace\gestureConfiguration_tristan\finger-recognition\test\test\obj\Debug\test.csprojResolveAssemblyReference.cache

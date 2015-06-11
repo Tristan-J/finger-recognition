@@ -1,0 +1,6 @@
+E:\workspace\finger-recognition\test\recognitionTest2\recognitionTest2\bin\Debug\recognitionTest2.exe.config
+E:\workspace\finger-recognition\test\recognitionTest2\recognitionTest2\obj\Debug\recognitionTest2.csprojResolveAssemblyReference.cache
+E:\workspace\finger-recognition\test\recognitionTest2\recognitionTest2\bin\Debug\recognitionTest2.exe
+E:\workspace\finger-recognition\test\recognitionTest2\recognitionTest2\bin\Debug\recognitionTest2.pdb
+E:\workspace\finger-recognition\test\recognitionTest2\recognitionTest2\obj\Debug\recognitionTest2.exe
+E:\workspace\finger-recognition\test\recognitionTest2\recognitionTest2\obj\Debug\recognitionTest2.pdb

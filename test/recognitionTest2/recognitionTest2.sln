@@ -1,0 +1,20 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Express 2012 for Windows Desktop
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "recognitionTest2", "recognitionTest2\recognitionTest2.csproj", "{CBC57BDB-C658-41B3-82E7-2451C6D710BD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CBC57BDB-C658-41B3-82E7-2451C6D710BD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CBC57BDB-C658-41B3-82E7-2451C6D710BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CBC57BDB-C658-41B3-82E7-2451C6D710BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CBC57BDB-C658-41B3-82E7-2451C6D710BD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
