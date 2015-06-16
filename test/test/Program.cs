@@ -2,12 +2,16 @@
 *   author:     tristan
 *   email:      tristan.xiery@gmail.com
 *   tips:
-*               ADDBLOCK    where shold add function code block
+*               ADDBLOCK    where should add function code block
 *               SETTINGS    where the settings are set static
 *   optimize:   
 *               1. the roll down function impact the average line
 *               2. if the index-click impact the data of middle \
 *                   , I can choose the one that is more obvious
+*               3. set the comparision of prior and later value \
+*                   to avoid click-roll-move confusion
+*               4. temporarily, the moving cursor and roll \
+*                   are processed in judging functions
 */ 
 
 using System;
@@ -46,7 +50,12 @@ namespace ConsoleApplication1
                 past = 0;
                 return;
             }
+            public void inputData() {
+                past++;
+                return;
+            }
             public void refresh() {
+                nowAction = NULL;
                 past = 0;
                 return;
             }
@@ -101,6 +110,7 @@ namespace ConsoleApplication1
                 indexRollUp = false;
                 thumbRollDown = false;
                 thumbRollUp = false;
+                // SETTINGS
                 indexClickTimer = new ActionTimer(85, 190);
                 middleClickTimer = new ActionTimer(85, 190);
 
@@ -135,7 +145,7 @@ namespace ConsoleApplication1
 
                 return;
             }
-            private virtual void isAction();
+            private virtual void actionFilter();
 
             public Finger() {}
             public Data getData(){
@@ -151,7 +161,7 @@ namespace ConsoleApplication1
             public void startAction(){
                 String inputPath = "";
                 String line;
-                while (STATUS && (line = inputPath.ReadLine) != null){
+                while ((status == POWERON) && (line = inputPath.ReadLine) != null){
                     // ADDBLOCK: judge if break the process
 
                     char[] splitChar = {"\t"};
@@ -161,28 +171,60 @@ namespace ConsoleApplication1
                     // however, this might use no less than 3 input lines
 
                     setData(Convert.ToInt32(s[0]), Convert.ToInt32(s[1]), Convert.ToInt32(s[2]));
-                    isAction();
+                    actionFilter();
                 }
                 return;
             }
         }
 
         class Thumb : Finger {
-            // recognize functions
-            private bool isPowerTrigger() {
-                // ADDBLOCK
+            private bool powerDown(){
+                // ADDBLOCK: If power Down is triggered
+                System.WriteLine("power down is triggered!");
+                return false;
+            }
+            private bool cursorLeftRight() {
+                // ADDBLOCK: action-cursor move left-right triggered \
+                // using axis-y
+                if ((data.y - y.stable) >= THRESHOLD.MOVECURSORUP) {
+                    // 
+                } else {
+                    // 
+                }
+                System.WriteLine("CURSORMOVE LEFT RIGHT triggered!");
+                return false;
+            }
+            private bool isPowerDown() {
+                // ADDBLOCK: Conditions that make power down
                 return false;
             }
             private bool isMove() {
-                // ADDBLOCK
-                return false;
+                // Check if the cursor MOVING UP or DOWN \
+                // is triggered (using axis-y)
+                return ((data.y - y.stable) >= THRESHOLD.MOVECURSORUP) 
+                    || ((y.stable - data.y) >= THRESHOLD.MOVECURSORDOWN);
             }
-            private override void isAction() {
-                if (isPowerTrigger()) {
-                    System.WriteLine("thumb trigger!");
-                } else if (isMove()) {
-                    System.WriteLine("thumb move!");
+            private override void actionFilter() {
+                // Check if the action is lasting \
+                // or in the still time
+                switch (nowAction) {
+                    // case CURSORMOVE:    // ADDBLOCK: If cursor moving goes on \
+                    //     // listen to the values of index \
+                    //     // for cursor move up or down
+                    // 
+                    //     System.WriteLine("cursor move go on");
+                    // break;
+                    case NULL:
+                        if (isPowerDown()) {
+                            powerDown();
+                        } else if (isMove()) {
+                            cursorLeftRight();
+                        }
+                    break;
+                    default:
+                    break;
                 }
+                
                 return;
             }
 
@@ -197,18 +239,66 @@ namespace ConsoleApplication1
         }
 
         class Index : Finger {
-            private bool isClick() {
+            private bool leftClick() {
+                // ADDBLOCK: left click
+                System.WriteLine("LEFTCLICK triggered!");
                 return false;
+            }
+            private bool cursorUpDown() {
+                // ADDBLOCK: action-cursor move up-down triggered \
+                // using axis-y
+                if ((data.y - y.stable) >= THRESHOLD.MOVECURSORUP) {
+                    // 
+                } else {
+                    // 
+                }
+                System.WriteLine("CURSORMOVE UPDOWN triggered!");
+                return false;
+            }
+            private bool isClick() {
+                return (data.z - z.stable) >= THRESHOLD.LEFTCLICK;
             }
             private bool isMove() {
-                return false;
+                // Check if the cursor MOVING UP or DOWN \
+                // is triggered (using axis-y)
+                return ((data.y - y.stable) >= THRESHOLD.MOVECURSORUP) 
+                    || ((y.stable - data.y) >= THRESHOLD.MOVECURSORDOWN);
             }
-            private override void isAction() {
-                if (isClick()) {
-                    System.WriteLine("index click!");
-                } else if (isMove()) {
-                    System.WriteLine("index move!");
+            private override void actionFilter() {
+                // Check if the action is lasting \
+                // or in the still time
+                switch (nowAction) {
+                    case LEFTCLICK:     // If it was left_click \
+                        // go on still time \ 
+                        // and check if it is over
+                        indexClickTimer.inputData();
+                        if (!indexClickTimer.isStill() && !indexClickTimer.isOver()){
+                            isClick();
+                        } else if (indexClickTimer.isOver()) {
+                            indexClickTimer.refresh();
+                        }
+                    break;
+                    case ROLL:          // If rolling, follow the middle finger action
+                    break;
+                    // case CURSORMOVE:    // ADDBLOCK: If cursor moving goes on \
+                    //     // listen to the values of index \
+                    //     // for cursor move up or down
+                    // 
+                    //     System.WriteLine("cursor move go on");
+                    // break;
+                    case NULL:
+                        if (isClick()) {
+                            indexClickTimer.refresh();
+                            nowAction = LEFTCLICK;
+                            leftClick();
+                        } else if (isMove()) {
+                            cursorUpDown();
+                        }
+                    break;
+                    default:
+                    break;
                 }
+                
                 return;
             }
 
@@ -223,18 +313,53 @@ namespace ConsoleApplication1
         }
 
         class Middle : Finger {
-            private bool isClick() {
+            private bool rightClick() {
+                // ADDBLOCK: right click
+                System.WriteLine("right click triggered!");
                 return false;
+            }
+            private bool roll() {
+                // ADDBLOCK: action-cursor move up-down triggered \
+                // using axis-y
+                if ((data.y - y.stable) >= THRESHOLD.MOVECURSORUP) {
+                    // 
+                } else {
+                    // 
+                }
+                System.WriteLine("ROLL UPDOWN triggered!");
+                return false;
+            }
+            private bool isClick() {
+                return (data.z - z.stable) >= THRESHOLD.RIGHTCLICK;
             }
             private bool isRoll() {
                 return false;
             }
-            private override void isAction() {
-                if (isClick()) {
-                    System.WriteLine("middle click!");
-                } else if (isRoll()) {
-                    System.WriteLine("middle roll!");
+            private override void actionFilter() {
+                // Check if the action is lasting \
+                // or in the still time
+                switch (nowAction) {
+                    case LEFTCLICK:     // If it was right_click \
+                        // go on still time \ 
+                        // and check if it is over
+                        middleClickTimer.inputData();
+                        if (!middleClickTimer.isStill() && !middleClickTimer.isOver()){
+                            isClick();
+                        } else if (middleClickTimer.isOver()) {
+                            middleClickTimer.refresh();
+                        }
+                    break;
+                    case NULL:
+                        if (isClick()) {
+                            System.WriteLine("middle click!");
+                        } else if (isRoll()) {
+                            System.WriteLine("middle roll!");
+                        }
+                    break;
+                    default:
+                    break;
                 }
+
                 return;
             }
 
@@ -248,13 +373,30 @@ namespace ConsoleApplication1
             }
         }
 
-        static private bool STATUS;
+        enum ACTION {NULL, POWERON, POWEROFF, CURSORMOVE, RIGHTCLICK, LEFTCLICK, ROLL};
+        class THRESHOLD {
+            static public float LEFTCLICK;
+            static public float RIGHTCLICK;
+            static public float ROLLUP;
+            static public float ROLLDOWN;
+            static public float MOVECURSORUP;
+            static public float MOVECURSORDOWN;
+        }
+
         static private int THRESHOLD;
+        static private ACTION status;
+        static private ACTION nowAction;
 
         static private void initiate() {
             // SETTINGS
-            STATUS = true;
-            THRESHOLD = 8000;
+            status = POWERON;
+            nowAction = NULL;
+            THRESHOLD.LEFTCLICK = 8000;
+            THRESHOLD.RIGHTCLICK = 8000;
+            THRESHOLD.ROLLUP = 500;
+            THRESHOLD.ROLLDOWN = 500;
+            THRESHOLD.MOVECURSORDOWN = 500;
+            THRESHOLD.MOVECURSORUP = 500;
             Finger.initiateFingerStatus();
             return;
         }
@@ -267,6 +409,8 @@ namespace ConsoleApplication1
             Middle middle = new Middle();
 
             thumb.startAction();
+            index.startAction();
+            middle.startAction();
 
             Console.ReadKey();
             return ;
