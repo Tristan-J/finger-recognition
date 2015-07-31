@@ -26,13 +26,67 @@ using System.Security.Permissions;
 using Microsoft.Win32;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
-using System.Runtime.Serialization.Json;
 using System.Collections.Generic;
+using System.Windows.Forms;
+using System.Drawing;
+using System.Data;
 
-namespace ConsoleApplication1
-{
-    class Program
-    {
+namespace ConsoleApplication1 {
+    class Program {
+        // Write consoles into a file
+        // public static String consoleFolderName = @"../../../consoles";
+        // public static String timeStamp = DateTime.Now.ToString();
+        // public static String consoleFileName =  System.IO.Path.Combine(consoleFolderName, "2");
+        // // public System.IO.FileStream createdFile = System.IO.File.Create(consoleFileName);
+        // public static System.IO.StreamWriter consoleFile = 
+        //     new System.IO.StreamWriter(consoleFileName, true);
+        // public Cursor nCursor = new Cursor(Cursor.Current.Handle);
+
+        // Mouse event settings
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        public static extern int mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo);
+        const int MOUSEEVENTF_MOVE = 0x0001;
+        const int MOUSEEVENTF_LEFTDOWN = 0x0002;
+        const int MOUSEEVENTF_LEFTUP = 0x0004;
+        const int MOUSEEVENTF_RIGHTDOWN = 0x0008;
+        const int MOUSEEVENTF_RIGHTUP = 0x0010;
+        const int MOUSEEVENTF_VWHEEL = 0x0800;
+        // mouse_event(0x0800, 0, 0, 500, 0);
+        // const int MOUSEEVENTF_MIDDLEDOWN = 0x0020;
+        // const int MOUSEEVENTF_MIDDLEUP = 0x0040;
+        // const int MOUSEEVENTF_ABSOLUTE = 0x8000;
+        // const int MOUSEEVENTF_HWHEEL = 0x1000;
+        // mouse_event(0x1000, 0, 0, 500, 0);
+
+
+        enum ACTION {NULL, POWERON, POWEROFF, CURSORMOVE, RIGHTCLICK, LEFTCLICK, ROLL};
+        class THRESHOLD {
+            static public float LEFTCLICK;
+            static public float RIGHTCLICK;
+            static public float ROLLUP;
+            static public float ROLLDOWN;
+            static public float MOVECURSORUP;
+            static public float MOVECURSORDOWN;
+        }
+
+        static private ACTION status;
+        static private ACTION nowAction;
+
+        static private void initiate() {
+            // SETTINGS
+            status = ACTION.POWERON;
+            nowAction = ACTION.NULL;
+            THRESHOLD.LEFTCLICK = 9000;
+            THRESHOLD.RIGHTCLICK = 8000;
+            THRESHOLD.ROLLUP = 500;
+            THRESHOLD.ROLLDOWN = 500;
+            THRESHOLD.MOVECURSORUP = 1500;
+            THRESHOLD.MOVECURSORDOWN = 1500;
+            Finger.initiateFingerStatus();
+
+            return;
+        }
+
         class Data {
             public int x;
             public int y;
@@ -50,26 +104,38 @@ namespace ConsoleApplication1
                 past = 0;
                 return;
             }
+            public ActionTimer(int tStill) {
+                over = still = tStill;
+                past = 0;
+                return;
+            }
             public void inputData() {
                 past++;
                 return;
             }
             public void refresh() {
-                nowAction = NULL;
+                nowAction = ACTION.NULL;
                 past = 0;
                 return;
             }
             public bool isStill() {
-                return past >= still;
+                return past <= still;
             }
             public bool isOver(){
                 return past >= over;
+            }
+
+            public int getPast() {
+                return past;
             }
         }
 
         class Axis {
             private int num;
             private float stable;
+
+            // temp number
+            public int tempNum = 0;
 
             public Axis(int tNum, float tStable) {
                 num = tNum;
@@ -79,6 +145,8 @@ namespace ConsoleApplication1
             public void inputData(int tData) {
                 num++;
                 stable += (tData - stable)/num;
+
+                tempNum++;
                 return;
             }
             public int getNum() {
@@ -90,62 +158,53 @@ namespace ConsoleApplication1
         }
 
         class Finger {
-            static private bool indexClick;
-            static private ActionTimer indexClickTimer;
-            static private bool middleClick;
-            static private ActionTimer middleClickTimer;
-            static private bool middleRollDown;
-            static private bool middleRollUp;
-            static private bool indexRollDown;
-            static private bool indexRollUp;
-            static private bool thumbRollDown;
-            static private bool thumbRollUp;
+            static protected ActionTimer thumbCursorTimer;
+            static protected ActionTimer indexClickTimer;
+            static protected ActionTimer middleClickTimer;
+            static protected ActionTimer middleRollTimer;
 
             static public void initiateFingerStatus() {
-                indexClick = false;
-                middleClick = false;
-                middleRollDown = false;
-                middleRollUp = false;
-                indexRollDown = false;
-                indexRollUp = false;
-                thumbRollDown = false;
-                thumbRollUp = false;
                 // SETTINGS
-                indexClickTimer = new ActionTimer(85, 190);
-                middleClickTimer = new ActionTimer(85, 190);
+                // thumbOnOffTimer = new ActionTimer(3);
+                thumbCursorTimer = new ActionTimer(3);
+                // indexCursorTimer = new ActionTimer(3);
+                middleRollTimer = new ActionTimer(10);
+                indexClickTimer = new ActionTimer(105, 190);
+                middleClickTimer = new ActionTimer(105, 190);
 
                 return;
             }
 
-            private Axis x;
-            private Axis y;
-            private Axis z;
-            private Data data;
-            private String recordPath;
-            private String inputPath;
+            protected String recordPath;
+            protected String inputPath;
+            protected Data data;
+            protected Axis x;
+            protected Axis y;
+            protected Axis z;
 
-            private void updateAxis() {
+            protected void updateAxis() {
                 x.inputData(data.x);
                 y.inputData(data.y);
                 z.inputData(data.z);
                 return;
             }
-            private void setAxisFromRecord(){
+            protected void setAxisFromRecord(){
                 if (recordPath == "") {
                     return;
                 }
                 StreamReader stream = new StreamReader(recordPath);
                 String line = stream.ReadLine();
-                String num = line.Convert.ToInt32(line);
+                int num = Convert.ToInt32(line);
                 line = stream.ReadLine();
-                String[] s = line.Split(",");
-                x = new Axis(num, float.Parse(s[0], CultureInfo.InvariantCulture.NumberFormat));
-                y = new Axis(num, float.Parse(s[1], CultureInfo.InvariantCulture.NumberFormat));
-                z = new Axis(num, float.Parse(s[2], CultureInfo.InvariantCulture.NumberFormat));
+                char[] splitChar = {','};
+                String[] s = line.Split(splitChar);
+                x = new Axis(num, float.Parse(s[0]));
+                y = new Axis(num, float.Parse(s[1]));
+                z = new Axis(num, float.Parse(s[2]));
 
                 return;
             }
-            private virtual void actionFilter();
+            protected virtual void actionFilter() {}
 
             public Finger() {}
             public Data getData(){
@@ -159,66 +218,99 @@ namespace ConsoleApplication1
                 return;
             }
             public void startAction(){
-                String inputPath = "";
                 String line;
-                while ((status == POWERON) && (line = inputPath.ReadLine) != null){
-                    // ADDBLOCK: judge if break the process
-
-                    char[] splitChar = {"\t"};
+                StreamReader stream = new StreamReader(inputPath);
+                while ((status == ACTION.POWERON) && (line = stream.ReadLine()) != null){
+                    char[] splitChar = {'\t'};
                     String[] s = line.Split(splitChar);
-
-                    // ADDBLOCK: judge if the input line is complete
-                    // however, this might use no less than 3 input lines
 
                     setData(Convert.ToInt32(s[0]), Convert.ToInt32(s[1]), Convert.ToInt32(s[2]));
                     actionFilter();
                 }
+
                 return;
             }
         }
 
         class Thumb : Finger {
             private bool powerDown(){
-                // ADDBLOCK: If power Down is triggered
-                System.WriteLine("power down is triggered!");
+                // ADDBLOCK: Make power down
+                Console.WriteLine("power down is triggered! ----- " + x.tempNum.ToString());
                 return false;
             }
             private bool cursorLeftRight() {
-                // ADDBLOCK: action-cursor move left-right triggered \
+                // Cursor movements when left-right triggered \
                 // using axis-y
-                if ((data.y - y.stable) >= THRESHOLD.MOVECURSORUP) {
-                    // 
+                int more = 0;
+                int less = 0;
+                int cursorX = 0;
+
+                if ((more = (data.y - (int)(y.getStable()))) >= THRESHOLD.MOVECURSORUP) {
+                    if (more <= 2000) {
+                        // speed 1
+                        cursorX = 1;
+                    } else if (more <= 2500) {
+                        // speed 2
+                        cursorX = 2;
+                    } else if (more <= 3000) {
+                        // speed 3
+                        cursorX = 3;
+                    } else {
+                        // speed 4
+                        cursorX = 4;
+                    }
                 } else {
-                    // 
+                    less = (int)y.getStable() - data.y;
+                    if (less <= 2000) {
+                        // speed 1
+                        cursorX = -1;
+                    } else if (less <= 2500) {
+                        // speed 2
+                        cursorX = -2;
+                    } else if (less <= 3000) {
+                        // speed 3
+                        cursorX = -3;
+                    } else {
+                        // speed 4
+                        cursorX = -4;
+                    }
                 }
-                System.WriteLine("CURSORMOVE LEFT RIGHT triggered!");
+
+                // System.Threading.Thread.Sleep(500);
+                // mouse_event(MOUSEEVENTF_MOVE, Cursor.Position.X, Cursor.Position.Y, 0, 0);
                 return false;
             }
             private bool isPowerDown() {
                 // ADDBLOCK: Conditions that make power down
                 return false;
             }
-            private bool isMove() {
+            private bool isMoveCursor() {
                 // Check if the cursor MOVING UP or DOWN \
                 // is triggered (using axis-y)
-                return ((data.y - y.stable) >= THRESHOLD.MOVECURSORUP) 
-                    || ((y.stable - data.y) >= THRESHOLD.MOVECURSORDOWN);
+                return ((data.y - y.getStable()) >= THRESHOLD.MOVECURSORUP) 
+                    || ((y.getStable() - data.y) >= THRESHOLD.MOVECURSORDOWN);
             }
-            private override void actionFilter() {
+            protected override void actionFilter() {
                 // Check if the action is lasting \
                 // or in the still time
                 switch (nowAction) {
-                    // case CURSORMOVE:    // ADDBLOCK: If cursor moving goes on \
-                    //     // listen to the values of index \
-                    //     // for cursor move up or down
-                    // 
-                    //     System.WriteLine("cursor move go on");
-                    // break;
-                    case NULL:
+                    case ACTION.CURSORMOVE:    // If cursor moving goes on \
+                        // listen to the values of index \
+                        // for cursor move up or down
+                        if (!isMoveCursor() && !thumbCursorTimer.isStill()) {
+                            nowAction = ACTION.NULL;
+                            cursorLeftRight();
+                        }
+                        thumbCursorTimer.inputData();
+                        if (thumbCursorTimer.getPast() == 3) {
+                            cursorLeftRight();
+                        }
+                    break;
+                    case ACTION.NULL:
                         if (isPowerDown()) {
                             powerDown();
-                        } else if (isMove()) {
-                            cursorLeftRight();
+                        } else if (isMoveCursor()) {
+                            nowAction = ACTION.CURSORMOVE;
                         }
                     break;
                     default:
@@ -240,56 +332,87 @@ namespace ConsoleApplication1
 
         class Index : Finger {
             private bool leftClick() {
-                // ADDBLOCK: left click
-                System.WriteLine("LEFTCLICK triggered!");
+                mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
+                mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
                 return false;
             }
             private bool cursorUpDown() {
-                // ADDBLOCK: action-cursor move up-down triggered \
+                // Cursor move up-down triggered \
                 // using axis-y
-                if ((data.y - y.stable) >= THRESHOLD.MOVECURSORUP) {
-                    // 
+                int more = 0;
+                int less = 0;
+                int cursorY = 0;
+
+                if ((more = (data.y - (int)(y.getStable()))) >= THRESHOLD.MOVECURSORUP) {
+                    if (more <= 2000) {
+                        // speed 1
+                        cursorY = 1;
+                    } else if (more <= 2500) {
+                        // speed 2
+                        cursorY = 2;
+                    } else if (more <= 3000) {
+                        // speed 3
+                        cursorY = 3;
+                    } else {
+                        // speed 4
+                        cursorY = 4;
+                    }
                 } else {
-                    // 
+                    less = (int)y.getStable() - data.y;
+                    if (less <= 2000) {
+                        // speed 1
+                        cursorY = -1;
+                    } else if (less <= 2500) {
+                        // speed 2
+                        cursorY = -2;
+                    } else if (less <= 3000) {
+                        // speed 3
+                        cursorY = -3;
+                    } else {
+                        // speed 4
+                        cursorY = -4;
+                    }
                 }
-                System.WriteLine("CURSORMOVE UPDOWN triggered!");
+
+                // System.Threading.Thread.Sleep(1000);
+                // mouse_event(MOUSEEVENTF_MOVE, Cursor.Position.X, Cursor.Position.Y + cursorY, 0, 0);
                 return false;
             }
             private bool isClick() {
-                return (data.z - z.stable) >= THRESHOLD.LEFTCLICK;
+                return (data.z - z.getStable()) >= THRESHOLD.LEFTCLICK;
             }
             private bool isMove() {
                 // Check if the cursor MOVING UP or DOWN \
                 // is triggered (using axis-y)
-                return ((data.y - y.stable) >= THRESHOLD.MOVECURSORUP) 
-                    || ((y.stable - data.y) >= THRESHOLD.MOVECURSORDOWN);
+                return ((data.y - y.getStable()) >= THRESHOLD.MOVECURSORUP) 
+                    || ((y.getStable() - data.y) >= THRESHOLD.MOVECURSORDOWN);
             }
-            private override void actionFilter() {
+            protected override void actionFilter() {
                 // Check if the action is lasting \
                 // or in the still time
                 switch (nowAction) {
-                    case LEFTCLICK:     // If it was left_click \
+                    case ACTION.LEFTCLICK:     // If it was left_click \
                         // go on still time \ 
                         // and check if it is over
                         indexClickTimer.inputData();
-                        if (!indexClickTimer.isStill() && !indexClickTimer.isOver()){
-                            isClick();
+                        if (!indexClickTimer.isStill() && !indexClickTimer.isOver() && isClick()){
+                            leftClick();
                         } else if (indexClickTimer.isOver()) {
                             indexClickTimer.refresh();
                         }
                     break;
-                    case ROLL:          // If rolling, follow the middle finger action
+                    case ACTION.ROLL:          // If rolling, follow the middle finger action
                     break;
-                    // case CURSORMOVE:    // ADDBLOCK: If cursor moving goes on \
+                    // case ACTION.CURSORMOVE:    // ADDBLOCK: If cursor moving goes on \
                     //     // listen to the values of index \
                     //     // for cursor move up or down
-                    // 
-                    //     System.WriteLine("cursor move go on");
-                    // break;
-                    case NULL:
+                    
+                    //     Console.WriteLine("cursor move go on");
+                    // break;<<<<<
+                    case ACTION.NULL:
                         if (isClick()) {
                             indexClickTimer.refresh();
-                            nowAction = LEFTCLICK;
+                            nowAction = ACTION.LEFTCLICK;
                             leftClick();
                         } else if (isMove()) {
                             cursorUpDown();
@@ -314,46 +437,92 @@ namespace ConsoleApplication1
 
         class Middle : Finger {
             private bool rightClick() {
-                // ADDBLOCK: right click
-                System.WriteLine("right click triggered!");
+                mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, 0);
+                mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, 0);
                 return false;
             }
             private bool roll() {
-                // ADDBLOCK: action-cursor move up-down triggered \
+                // Cursor move up-down triggered \
                 // using axis-y
-                if ((data.y - y.stable) >= THRESHOLD.MOVECURSORUP) {
-                    // 
+                int more = 0;
+                int less = 0;
+                int scrollY = 0;
+
+                if ((more = (data.z - (int)(z.getStable()))) >= THRESHOLD.MOVECURSORUP) {
+                    if (more <= 2000) {
+                        // speed 1
+                        scrollY = 1;
+                    } else if (more <= 2500) {
+                        // speed 2
+                        scrollY = 2;
+                    } else if (more <= 3000) {
+                        // speed 3
+                        scrollY = 3;
+                    } else {
+                        // speed 4
+                        scrollY = 4;
+                    }
                 } else {
-                    // 
+                    less = (int)y.getStable() - data.y;
+                    if (less <= 2000) {
+                        // speed 1
+                        scrollY = 1;
+                    } else if (less <= 2500) {
+                        // speed 2
+                        scrollY = 2;
+                    } else if (less <= 3000) {
+                        // speed 3
+                        scrollY = 3;
+                    } else {
+                        // speed 4
+                        scrollY = 4;
+                    }
                 }
-                System.WriteLine("ROLL UPDOWN triggered!");
+                Console.WriteLine("MOUSEEVENTF_VWHEEL --- {0}", scrollY);
+                // mouse_event(MOUSEEVENTF_VWHEEL, 0, 0, scrollY, 0);
+                // System.Threading.Thread.Sleep(500);
                 return false;
             }
             private bool isClick() {
-                return (data.z - z.stable) >= THRESHOLD.RIGHTCLICK;
+                return (data.z - z.getStable()) >= THRESHOLD.RIGHTCLICK;
             }
             private bool isRoll() {
-                return false;
+                return ((data.z - z.getStable()) >= THRESHOLD.ROLLUP) 
+                    || ((z.getStable() - data.z) >= THRESHOLD.ROLLDOWN);
             }
-            private override void actionFilter() {
+            protected override void actionFilter() {
                 // Check if the action is lasting \
                 // or in the still time
                 switch (nowAction) {
-                    case LEFTCLICK:     // If it was right_click \
+                    case ACTION.RIGHTCLICK:     // If it was right_click \
                         // go on still time \ 
                         // and check if it is over
                         middleClickTimer.inputData();
-                        if (!middleClickTimer.isStill() && !middleClickTimer.isOver()){
-                            isClick();
+                        if (!middleClickTimer.isStill() && !middleClickTimer.isOver() && isClick()){
+                            rightClick();
                         } else if (middleClickTimer.isOver()) {
                             middleClickTimer.refresh();
                         }
                     break;
-                    case NULL:
+                    case ACTION.ROLL:   // If it was a vertical scroll \
+                        // go on still time \ 
+                        // and check if it is over
+                        middleRollTimer.inputData();
+                        if (!middleRollTimer.isStill() && !middleRollTimer.isOver() && isRoll()){
+                            roll();
+                        } else if (middleRollTimer.isOver()) {
+                            middleRollTimer.refresh();
+                        }
+                    break;
+                    case ACTION.NULL:
                         if (isClick()) {
-                            System.WriteLine("middle click!");
+                            middleClickTimer.refresh();
+                            nowAction = ACTION.RIGHTCLICK;
+                            rightClick();
                         } else if (isRoll()) {
-                            System.WriteLine("middle roll!");
+                            middleRollTimer.refresh();
+                            nowAction = ACTION.ROLL;
+                            roll();
                         }
                     break;
                     default:
@@ -373,33 +542,6 @@ namespace ConsoleApplication1
             }
         }
 
-        enum ACTION {NULL, POWERON, POWEROFF, CURSORMOVE, RIGHTCLICK, LEFTCLICK, ROLL};
-        class THRESHOLD {
-            static public float LEFTCLICK;
-            static public float RIGHTCLICK;
-            static public float ROLLUP;
-            static public float ROLLDOWN;
-            static public float MOVECURSORUP;
-            static public float MOVECURSORDOWN;
-        }
-
-        static private int THRESHOLD;
-        static private ACTION status;
-        static private ACTION nowAction;
-
-        static private void initiate() {
-            // SETTINGS
-            status = POWERON;
-            nowAction = NULL;
-            THRESHOLD.LEFTCLICK = 8000;
-            THRESHOLD.RIGHTCLICK = 8000;
-            THRESHOLD.ROLLUP = 500;
-            THRESHOLD.ROLLDOWN = 500;
-            THRESHOLD.MOVECURSORDOWN = 500;
-            THRESHOLD.MOVECURSORUP = 500;
-            Finger.initiateFingerStatus();
-            return;
-        }
 
         static void Main(String[] args) {
             initiate();
